@@ -1,0 +1,213 @@
+import { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useUserStore } from '../stores/userStore';
+import { Button } from '../components/ui';
+import { colors } from '../constants/theme';
+
+const { width, height } = Dimensions.get('window');
+
+export default function WelcomeScreen() {
+  const router = useRouter();
+  const { hasCompletedOnboarding, isAuthenticated } = useUserStore();
+
+  const [logoOpacity] = useState(new Animated.Value(0));
+  const [logoScale] = useState(new Animated.Value(0.8));
+  const [titleOpacity] = useState(new Animated.Value(0));
+  const [titleTranslateY] = useState(new Animated.Value(20));
+  const [subtitleOpacity] = useState(new Animated.Value(0));
+  const [buttonOpacity] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    // Animate entrance
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(400),
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(titleTranslateY, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(600),
+      Animated.timing(subtitleOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.delay(800),
+      Animated.timing(buttonOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    // Auto-redirect if already onboarded
+    if (hasCompletedOnboarding && isAuthenticated) {
+      setTimeout(() => router.replace('/(tabs)'), 1500);
+    }
+  }, [hasCompletedOnboarding, isAuthenticated]);
+
+  const handleGetStarted = () => {
+    if (hasCompletedOnboarding) {
+      router.replace('/(tabs)');
+    } else {
+      router.push('/onboarding');
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Image
+        source={{
+          uri: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
+        }}
+        style={styles.backgroundImage}
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        style={styles.gradient}
+      />
+
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Animated.View
+            style={[
+              styles.logoContainer,
+              {
+                opacity: logoOpacity,
+                transform: [{ scale: logoScale }],
+              },
+            ]}
+          >
+            <Text style={styles.logoIcon}>🧞</Text>
+          </Animated.View>
+
+          <Animated.Text
+            style={[
+              styles.title,
+              {
+                opacity: titleOpacity,
+                transform: [{ translateY: titleTranslateY }],
+              },
+            ]}
+          >
+            TripGenie
+          </Animated.Text>
+
+          <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
+            Your AI-powered travel genie.{'\n'}
+            Wish for the perfect trip. We'll make it happen.
+          </Animated.Text>
+        </View>
+
+        <Animated.View style={[styles.buttonContainer, { opacity: buttonOpacity }]}>
+          <Button
+            title="Get Started"
+            onPress={handleGetStarted}
+            size="lg"
+            fullWidth
+            style={styles.primaryButton}
+          />
+          <Button
+            title="I already have an account"
+            onPress={() => router.push('/onboarding/login')}
+            variant="ghost"
+            size="md"
+            fullWidth
+            textStyle={styles.ghostButtonText}
+          />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  backgroundImage: {
+    position: 'absolute',
+    width,
+    height,
+  },
+  gradient: {
+    position: 'absolute',
+    width,
+    height,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 120,
+    paddingBottom: 60,
+  },
+  header: {
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  logoIcon: {
+    fontSize: 48,
+  },
+  title: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 16,
+    letterSpacing: -1,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  buttonContainer: {
+    gap: 12,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary[500],
+  },
+  ghostButtonText: {
+    color: 'rgba(255,255,255,0.8)',
+  },
+});

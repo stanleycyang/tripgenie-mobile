@@ -1,0 +1,558 @@
+import { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Button, VibeChips } from '../../components/ui';
+import { useTripStore, TripActivity } from '../../stores/tripStore';
+import { colors, borderRadius, shadows } from '../../constants/theme';
+
+const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = 300;
+
+interface ActivityCardProps {
+  activity: TripActivity;
+  onPress?: () => void;
+}
+
+function ActivityCard({ activity, onPress }: ActivityCardProps) {
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'restaurant':
+        return 'restaurant';
+      case 'transport':
+        return 'car';
+      case 'accommodation':
+        return 'bed';
+      default:
+        return 'location';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'restaurant':
+        return '#ef4444';
+      case 'transport':
+        return '#3b82f6';
+      case 'accommodation':
+        return '#8b5cf6';
+      default:
+        return colors.primary[500];
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.activityCard}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.activityTime}>
+        <Text style={styles.activityTimeText}>{activity.time}</Text>
+        <View
+          style={[
+            styles.activityDot,
+            { backgroundColor: getTypeColor(activity.type) },
+          ]}
+        />
+        <View style={styles.activityLine} />
+      </View>
+      <View style={styles.activityContent}>
+        <View style={styles.activityHeader}>
+          <View
+            style={[
+              styles.activityTypeIcon,
+              { backgroundColor: `${getTypeColor(activity.type)}15` },
+            ]}
+          >
+            <Ionicons
+              name={getTypeIcon(activity.type) as any}
+              size={16}
+              color={getTypeColor(activity.type)}
+            />
+          </View>
+          <View style={styles.activityInfo}>
+            <Text style={styles.activityTitle}>{activity.title}</Text>
+            <Text style={styles.activityDuration}>{activity.duration}</Text>
+          </View>
+          {activity.price && (
+            <Text style={styles.activityPrice}>{activity.price}</Text>
+          )}
+        </View>
+        <Text style={styles.activityDescription} numberOfLines={2}>
+          {activity.description}
+        </Text>
+        {activity.rating && (
+          <View style={styles.activityRating}>
+            <Ionicons name="star" size={14} color="#fbbf24" />
+            <Text style={styles.activityRatingText}>{activity.rating}</Text>
+            {activity.reviewCount && (
+              <Text style={styles.activityReviewCount}>
+                ({activity.reviewCount.toLocaleString()} reviews)
+              </Text>
+            )}
+          </View>
+        )}
+        <TouchableOpacity style={styles.bookButton}>
+          <Text style={styles.bookButtonText}>Book Now</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+export default function TripDetailScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { trips, currentTrip } = useTripStore();
+  const [selectedDay, setSelectedDay] = useState(0);
+
+  const trip = trips.find((t) => t.id === id) || currentTrip;
+
+  useEffect(() => {
+    if (!trip && id) {
+      router.back();
+    }
+  }, [trip, id]);
+
+  if (!trip) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  const formatDateRange = () => {
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
+    return `${start.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    })} - ${end.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })}`;
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Hero Image */}
+        <View style={styles.heroContainer}>
+          <Image source={{ uri: trip.coverImage }} style={styles.heroImage} />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
+            style={styles.heroGradient}
+          />
+          <SafeAreaView edges={['top']} style={styles.heroContent}>
+            <View style={styles.heroHeader}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.heroActions}>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="heart-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="share-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroCountry}>{trip.country}</Text>
+              <Text style={styles.heroTitle}>{trip.destination}</Text>
+              <View style={styles.heroMeta}>
+                <View style={styles.heroMetaItem}>
+                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroMetaText}>{formatDateRange()}</Text>
+                </View>
+                <View style={styles.heroMetaItem}>
+                  <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroMetaText}>
+                    {trip.travelers} traveler{trip.travelers > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Vibes */}
+          {trip.vibes && trip.vibes.length > 0 && (
+            <View style={styles.vibesSection}>
+              <VibeChips vibes={trip.vibes} />
+            </View>
+          )}
+
+          {/* Day Selector */}
+          <View style={styles.daySelector}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.daySelectorContent}
+            >
+              {trip.days.map((day, index) => (
+                <TouchableOpacity
+                  key={day.date}
+                  style={[
+                    styles.dayTab,
+                    selectedDay === index && styles.dayTabSelected,
+                  ]}
+                  onPress={() => setSelectedDay(index)}
+                >
+                  <Text
+                    style={[
+                      styles.dayTabNumber,
+                      selectedDay === index && styles.dayTabNumberSelected,
+                    ]}
+                  >
+                    Day {day.dayNumber}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dayTabDate,
+                      selectedDay === index && styles.dayTabDateSelected,
+                    ]}
+                  >
+                    {new Date(day.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Day Theme */}
+          <View style={styles.dayThemeContainer}>
+            <Text style={styles.dayTheme}>
+              {trip.days[selectedDay]?.theme}
+            </Text>
+          </View>
+
+          {/* Activities */}
+          <View style={styles.activitiesContainer}>
+            {trip.days[selectedDay]?.activities.map((activity) => (
+              <ActivityCard key={activity.id} activity={activity} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Bottom Bar */}
+      <View style={styles.bottomBar}>
+        <View style={styles.bottomBarInfo}>
+          <Text style={styles.bottomBarLabel}>Estimated cost</Text>
+          <Text style={styles.bottomBarPrice}>~$2,450</Text>
+        </View>
+        <Button
+          title="Book All"
+          onPress={() => {}}
+          size="lg"
+          style={styles.bookAllButton}
+        />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  heroContainer: {
+    height: HEADER_HEIGHT,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  heroContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroInfo: {
+    marginBottom: 8,
+  },
+  heroCountry: {
+    fontSize: 14,
+    color: colors.primary[300],
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 12,
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  heroMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroMetaText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  content: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    marginTop: -24,
+    paddingTop: 24,
+  },
+  vibesSection: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  daySelector: {
+    marginBottom: 16,
+  },
+  daySelectorContent: {
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  dayTab: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+  },
+  dayTabSelected: {
+    backgroundColor: colors.neutral[900],
+  },
+  dayTabNumber: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.neutral[600],
+    marginBottom: 2,
+  },
+  dayTabNumberSelected: {
+    color: '#fff',
+  },
+  dayTabDate: {
+    fontSize: 12,
+    color: colors.neutral[400],
+  },
+  dayTabDateSelected: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  dayThemeContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  dayTheme: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.neutral[900],
+  },
+  activitiesContainer: {
+    paddingHorizontal: 24,
+  },
+  activityCard: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  activityTime: {
+    alignItems: 'center',
+    width: 50,
+    marginRight: 16,
+  },
+  activityTimeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.neutral[500],
+    marginBottom: 8,
+  },
+  activityDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  activityLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: colors.neutral[200],
+    marginTop: 8,
+  },
+  activityContent: {
+    flex: 1,
+    backgroundColor: colors.neutral[50],
+    borderRadius: borderRadius.lg,
+    padding: 16,
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  activityTypeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.neutral[900],
+  },
+  activityDuration: {
+    fontSize: 12,
+    color: colors.neutral[500],
+    marginTop: 2,
+  },
+  activityPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: colors.neutral[600],
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  activityRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  activityRatingText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.neutral[700],
+    marginLeft: 4,
+  },
+  activityReviewCount: {
+    fontSize: 13,
+    color: colors.neutral[500],
+    marginLeft: 4,
+  },
+  bookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary[50],
+    paddingVertical: 10,
+    borderRadius: borderRadius.md,
+  },
+  bookButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: colors.neutral[100],
+    ...shadows.lg,
+  },
+  bottomBarInfo: {},
+  bottomBarLabel: {
+    fontSize: 12,
+    color: colors.neutral[500],
+    marginBottom: 2,
+  },
+  bottomBarPrice: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.neutral[900],
+  },
+  bookAllButton: {
+    minWidth: 140,
+  },
+});
