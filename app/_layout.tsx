@@ -28,13 +28,33 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === 'auth';
     const inOnboarding = segments[0] === 'onboarding';
     const inIndex = (segments as string[]).length === 0 || segments[0] === undefined;
+    const inCreate = segments[0] === 'create';
+    const inTrip = segments[0] === 'trip';
+    const inTabs = segments[0] === '(tabs)';
+    
+    // Protected routes that require authentication
+    const protectedTabRoutes = ['profile'];
+    const currentTab = segments[1];
+    const isProtectedTab = inTabs && protectedTabRoutes.includes(currentTab as string);
 
     // Allow access to index (splash) screen
     if (inIndex) return;
 
-    // If user is not authenticated and not in auth/onboarding screens, redirect to login
-    if (!isAuthenticated && !inAuthGroup && !inOnboarding) {
-      router.replace('/auth/login');
+    // CHANGED: Allow anonymous users to access:
+    // - Onboarding
+    // - Create trip flow
+    // - View trips
+    // - Main tabs (except profile)
+    if (inOnboarding || inCreate || inTrip) return;
+    
+    // Allow tabs except protected ones
+    if (inTabs && !isProtectedTab) return;
+    
+    // If user is not authenticated and trying to access protected routes
+    if (!isAuthenticated && (inAuthGroup === false && isProtectedTab)) {
+      // Don't redirect - we'll show AuthGate component instead
+      // This allows the user to stay on the page and see the auth prompt
+      return;
     }
     
     // If user is authenticated and in auth screens, redirect to main app

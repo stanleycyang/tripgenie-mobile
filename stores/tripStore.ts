@@ -8,12 +8,15 @@ export interface Activity {
   description: string;
   location: string;
   duration: string;
-  type: 'activity' | 'restaurant' | 'transport' | 'accommodation';
+  type: 'activity' | 'restaurant' | 'transport' | 'accommodation' | 'attraction' | 'experience';
   price?: string;
   bookingUrl?: string;
   image?: string;
   rating?: number;
   reviewCount?: number;
+  topReview?: string;
+  freeCancellation?: boolean;
+  isSaved?: boolean;
 }
 
 // Alias for backward compatibility

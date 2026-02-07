@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -13,13 +15,53 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SearchInput, DestinationCard, Button } from '../../components/ui';
 import { popularDestinations } from '../../constants/destinations';
+import { useAuthContext } from '../../components/AuthProvider';
+import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
+const INSPIRATIONS = [
+  { emoji: '🏖️', text: 'Beach getaway' },
+  { emoji: '🏔️', text: 'Mountain escape' },
+  { emoji: '🍜', text: 'Foodie adventure' },
+  { emoji: '🎨', text: 'Art & culture' },
+  { emoji: '🎉', text: 'Party weekend' },
+  { emoji: '💑', text: 'Romantic trip' },
+];
+
 export default function ExploreScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuthContext();
+  const { trips } = useTripStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [greeting, setGreeting] = useState('');
+  
+  // Animation
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(20))[0];
+
+  useEffect(() => {
+    // Set greeting based on time
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good morning');
+    else if (hour < 17) setGreeting('Good afternoon');
+    else setGreeting('Good evening');
+
+    // Animate in
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleDestinationPress = (destinationId: string) => {
     const destination = popularDestinations.find((d) => d.id === destinationId);
@@ -35,6 +77,13 @@ export default function ExploreScreen() {
     router.push('/create');
   };
 
+  const handleInspirationPress = (text: string) => {
+    // Could pre-fill vibes based on inspiration
+    router.push('/create');
+  };
+
+  const hasTrips = trips.length > 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -42,15 +91,26 @@ export default function ExploreScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <Animated.View
+          style={[
+            styles.header,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
           <View>
-            <Text style={styles.greeting}>Good afternoon! 👋</Text>
-            <Text style={styles.headerTitle}>Where to next?</Text>
+            <Text style={styles.greeting}>{greeting} 👋</Text>
+            <Text style={styles.headerTitle}>
+              {hasTrips ? 'Where to next?' : 'Plan your dream trip'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color={colors.neutral[700]} />
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={colors.neutral[700]}
+            />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Search */}
         <View style={styles.searchSection}>
@@ -61,28 +121,72 @@ export default function ExploreScreen() {
           />
         </View>
 
-        {/* Quick Action Card */}
-        <TouchableOpacity onPress={handleCreateTrip} activeOpacity={0.9}>
+        {/* Hero Card - Main CTA */}
+        <TouchableOpacity onPress={handleCreateTrip} activeOpacity={0.95}>
           <LinearGradient
-            colors={[colors.primary[500], colors.primary[600]]}
+            colors={['#6366f1', '#8b5cf6', '#a855f7']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.quickActionCard}
+            style={styles.heroCard}
           >
-            <View style={styles.quickActionContent}>
-              <View style={styles.quickActionIcon}>
-                <Ionicons name="sparkles" size={28} color="#fff" />
+            {/* Background pattern */}
+            <View style={styles.heroPattern}>
+              <Text style={styles.heroPatternEmoji}>✈️</Text>
+              <Text style={[styles.heroPatternEmoji, styles.heroPattern2]}>🗺️</Text>
+              <Text style={[styles.heroPatternEmoji, styles.heroPattern3]}>🌴</Text>
+            </View>
+
+            <View style={styles.heroContent}>
+              <View style={styles.heroBadge}>
+                <Ionicons name="sparkles" size={14} color="#fff" />
+                <Text style={styles.heroBadgeText}>AI-Powered</Text>
               </View>
-              <View style={styles.quickActionText}>
-                <Text style={styles.quickActionTitle}>Plan with AI</Text>
-                <Text style={styles.quickActionSubtitle}>
-                  Let our AI craft your perfect itinerary
-                </Text>
+
+              <Text style={styles.heroTitle}>Create Your Perfect Trip</Text>
+              <Text style={styles.heroSubtitle}>
+                Tell us where you want to go, and we'll plan everything in seconds
+              </Text>
+
+              <View style={styles.heroButton}>
+                <Text style={styles.heroButtonText}>Start Planning</Text>
+                <Ionicons name="arrow-forward" size={18} color="#6366f1" />
               </View>
-              <Ionicons name="arrow-forward" size={24} color="#fff" />
+
+              <View style={styles.heroFeatures}>
+                <View style={styles.heroFeature}>
+                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroFeatureText}>No account needed</Text>
+                </View>
+                <View style={styles.heroFeature}>
+                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroFeatureText}>100% free</Text>
+                </View>
+              </View>
             </View>
           </LinearGradient>
         </TouchableOpacity>
+
+        {/* Quick Inspirations */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Looking for inspiration?</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.inspirationsContainer}
+          >
+            {INSPIRATIONS.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.inspirationChip}
+                onPress={() => handleInspirationPress(item.text)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.inspirationEmoji}>{item.emoji}</Text>
+                <Text style={styles.inspirationText}>{item.text}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
         {/* Popular Destinations */}
         <View style={styles.section}>
@@ -100,83 +204,64 @@ export default function ExploreScreen() {
             snapToInterval={width * 0.7 + 16}
           >
             {popularDestinations.slice(0, 5).map((destination) => (
-              <View key={destination.id} style={styles.destinationCardWrapper}>
-                <DestinationCard
-                  image={destination.image}
-                  name={destination.name}
-                  country={destination.country}
-                  description={destination.description}
-                  onPress={() => handleDestinationPress(destination.id)}
-                  size="medium"
-                />
-              </View>
+              <DestinationCard
+                key={destination.id}
+                destination={destination}
+                onPress={() => handleDestinationPress(destination.id)}
+                style={styles.destinationCard}
+              />
             ))}
           </ScrollView>
         </View>
 
-        {/* Trending Now */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Trending Now 🔥</Text>
+        {/* Social Proof */}
+        <View style={styles.socialProof}>
+          <View style={styles.socialProofAvatars}>
+            {['👩🏻', '👨🏽', '👩🏼', '👨🏻'].map((emoji, i) => (
+              <View
+                key={i}
+                style={[styles.avatar, { marginLeft: i > 0 ? -10 : 0 }]}
+              >
+                <Text style={styles.avatarEmoji}>{emoji}</Text>
+              </View>
+            ))}
           </View>
+          <Text style={styles.socialProofText}>
+            <Text style={styles.socialProofNumber}>10,000+</Text> trips planned this week
+          </Text>
+        </View>
+
+        {/* Trending This Season */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trending This Season</Text>
           <View style={styles.trendingGrid}>
-            {popularDestinations.slice(5, 8).map((destination) => (
+            {popularDestinations.slice(5, 9).map((destination) => (
               <TouchableOpacity
                 key={destination.id}
-                style={styles.trendingItem}
+                style={styles.trendingCard}
                 onPress={() => handleDestinationPress(destination.id)}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
               >
-                <DestinationCard
-                  image={destination.image}
-                  name={destination.name}
-                  country={destination.country}
-                  onPress={() => handleDestinationPress(destination.id)}
-                  size="small"
+                <Image
+                  source={{ uri: destination.image }}
+                  style={styles.trendingImage}
                 />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  style={styles.trendingGradient}
+                />
+                <View style={styles.trendingContent}>
+                  <Text style={styles.trendingName}>{destination.name}</Text>
+                  <Text style={styles.trendingCountry}>{destination.country}</Text>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Inspiration */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Travel Inspiration</Text>
-          </View>
-          <View style={styles.inspirationCards}>
-            {[
-              { icon: '🏖️', title: 'Beach Getaways', subtitle: '12 destinations' },
-              { icon: '🏔️', title: 'Mountain Retreats', subtitle: '8 destinations' },
-              { icon: '🏛️', title: 'City Breaks', subtitle: '15 destinations' },
-              { icon: '🌿', title: 'Eco Tourism', subtitle: '6 destinations' },
-            ].map((item, index) => (
-              <TouchableOpacity key={index} style={styles.inspirationCard}>
-                <Text style={styles.inspirationIcon}>{item.icon}</Text>
-                <Text style={styles.inspirationTitle}>{item.title}</Text>
-                <Text style={styles.inspirationSubtitle}>{item.subtitle}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Bottom Spacing */}
-        <View style={{ height: 24 }} />
+        {/* Bottom padding */}
+        <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleCreateTrip}
-        activeOpacity={0.9}
-      >
-        <LinearGradient
-          colors={[colors.primary[500], colors.primary[600]]}
-          style={styles.fabGradient}
-        >
-          <Ionicons name="add" size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -184,18 +269,17 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.neutral[50],
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 16,
+    marginBottom: 20,
   },
   greeting: {
     fontSize: 14,
@@ -211,49 +295,110 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.sm,
   },
   searchSection: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  quickActionCard: {
+  heroCard: {
     marginHorizontal: 24,
     borderRadius: borderRadius.xl,
-    padding: 20,
-    marginBottom: 32,
+    padding: 24,
+    marginBottom: 24,
+    overflow: 'hidden',
     ...shadows.lg,
   },
-  quickActionContent: {
+  heroPattern: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  heroPatternEmoji: {
+    position: 'absolute',
+    fontSize: 60,
+    opacity: 0.15,
+    right: 20,
+    top: 20,
+  },
+  heroPattern2: {
+    right: 80,
+    top: 60,
+    fontSize: 40,
+  },
+  heroPattern3: {
+    right: -10,
+    top: 100,
+    fontSize: 50,
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 1,
+  },
+  heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    gap: 6,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
   },
-  quickActionText: {
-    flex: 1,
-  },
-  quickActionTitle: {
-    fontSize: 18,
+  heroBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 4,
   },
-  quickActionSubtitle: {
-    fontSize: 14,
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  heroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    borderRadius: borderRadius.lg,
+    marginBottom: 16,
+  },
+  heroButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  heroFeatures: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  heroFeature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroFeatureText: {
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -266,65 +411,116 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.neutral[900],
+    paddingHorizontal: 24,
+    marginBottom: 16,
   },
   seeAllButton: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary[500],
   },
-  horizontalScroll: {
-    paddingLeft: 24,
-    paddingRight: 8,
+  inspirationsContainer: {
+    paddingHorizontal: 24,
+    gap: 10,
   },
-  destinationCardWrapper: {
-    marginRight: 16,
+  inspirationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: borderRadius.full,
+    ...shadows.sm,
+  },
+  inspirationEmoji: {
+    fontSize: 20,
+  },
+  inspirationText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.neutral[700],
+  },
+  horizontalScroll: {
+    paddingHorizontal: 24,
+    gap: 16,
+  },
+  destinationCard: {
+    width: width * 0.7,
+  },
+  socialProof: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 20,
+    marginHorizontal: 24,
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    borderRadius: borderRadius.lg,
+    ...shadows.sm,
+  },
+  socialProofAvatars: {
+    flexDirection: 'row',
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  avatarEmoji: {
+    fontSize: 16,
+  },
+  socialProofText: {
+    fontSize: 14,
+    color: colors.neutral[600],
+  },
+  socialProofNumber: {
+    fontWeight: '700',
+    color: colors.neutral[900],
   },
   trendingGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  trendingItem: {
-    flex: 1,
-  },
-  inspirationCards: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 24,
     gap: 12,
   },
-  inspirationCard: {
-    width: (width - 48 - 12) / 2,
-    backgroundColor: colors.neutral[50],
+  trendingCard: {
+    width: (width - 60) / 2,
+    height: 140,
     borderRadius: borderRadius.lg,
-    padding: 16,
+    overflow: 'hidden',
     ...shadows.sm,
   },
-  inspirationIcon: {
-    fontSize: 32,
-    marginBottom: 12,
+  trendingImage: {
+    width: '100%',
+    height: '100%',
   },
-  inspirationTitle: {
+  trendingGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+  },
+  trendingContent: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+  },
+  trendingName: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.neutral[900],
-    marginBottom: 4,
+    color: '#fff',
   },
-  inspirationSubtitle: {
+  trendingCountry: {
     fontSize: 12,
-    color: colors.neutral[500],
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: 24,
-    ...shadows.lg,
-  },
-  fabGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
   },
 });
